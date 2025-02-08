@@ -1,17 +1,9 @@
-import argparse
 import os
 import requests
 
-parser = argparse.ArgumentParser(
-    description="Generate example data, train, infer, visualize results"
-)
-
-parser.add_argument("--setup", action="store_true", help="Download experimental data")
-parser.add_argument("--train", action="store_true", help="Train the model")
-parser.add_argument("--test", action="store_true", help="Visualize the results")
 
 
-def dl_data():
+def main():
     datasets = {
         "ETTh1": "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv",
         "ETTh2": "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh2.csv",
@@ -30,13 +22,7 @@ def dl_data():
             print(f"Failed to download: {name}.csv")
 
     print("Done!")
-
-
-def main():
-    args = parser.parse_args()
-
-    if args.setup:
-        dl_data()
+    
 
 
 if __name__ == "__main__":
