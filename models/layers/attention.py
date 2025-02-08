@@ -27,12 +27,13 @@ def scaled_dot_product(d_k, Q, K, V, mask=None):
 
 
 class AttentionHead(nn.Module):
-    def __init__(self, embed_dim, d_head):
+    def __init__(self, embed_dim, d_head, dropout):
         super().__init__()
         self.W_q = nn.Linear(embed_dim, d_head)
         self.W_k = nn.Linear(embed_dim, d_head)
         self.W_v = nn.Linear(embed_dim, d_head)
         self.d_head = d_head
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, queries, keys, values, mask=None):
         """
@@ -50,11 +51,12 @@ class AttentionHead(nn.Module):
         output = scaled_dot_product(
             self.d_head, Q, K, V, mask
         )  # (batch_size, seq_len, d_head)
+        output = self.dropout(output)
         return output
 
 
 class MultiheadAttention(nn.Module):
-    def __init__(self, embed_dim, num_heads):
+    def __init__(self, embed_dim, num_heads, dropout):
         super().__init__()
         assert (
             embed_dim % num_heads == 0
@@ -68,6 +70,7 @@ class MultiheadAttention(nn.Module):
         self.W_k = nn.Linear(embed_dim, embed_dim)
         self.W_v = nn.Linear(embed_dim, embed_dim)
         self.W_o = nn.Linear(embed_dim, embed_dim)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, queries, keys, values, mask=None):
         """
@@ -110,4 +113,5 @@ class MultiheadAttention(nn.Module):
             .view(batch_size, -1, self.embed_dim)  # (batch_size, seq_len, embed_dim)
         )
         output = self.W_o(context)  # (batch_size, seq_len, embed_dim)
+        output = self.dropout(output)
         return output  # (batch_size, seq_len, embed_dim)

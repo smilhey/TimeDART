@@ -24,13 +24,14 @@ class PosEmbedding(nn.Module):
 
 
 class PosEncoding(nn.Module):
-    def __init__(self, d_model):
+    def __init__(self, d_model, dropout):
         super().__init__()
         self.d_model = d_model
         self.pos_embedding = PosEmbedding(d_model)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        return x + self.pos_embedding(x)
+        return self.dropout(x + self.pos_embedding(x))
 
 
 class Patch(nn.Module):
