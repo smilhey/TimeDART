@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from layers.encoder_decoder import CausalTransformerEncoder, MaskedDenoisingPatchDecoder
-from layers.diffusion import Diffusion
-from layers.preprocess import (
+from .layers.encoder_decoder import CausalTransformerEncoder, MaskedDenoisingPatchDecoder
+from .layers.diffusion import Diffusion
+from .layers.preprocess import (
     ChannelIndependence,
     Patch,
     PatchEmbedding,
@@ -61,7 +61,7 @@ class Model(nn.Module):
 
         # Patch
         self.patch_len = args.patch_len
-        self.stride = args.stride
+        self.stride = self.patch_len # non-overlapping
         self.patch = Patch(
             patch_len=self.patch_len,
             stride=self.stride,
@@ -77,6 +77,7 @@ class Model(nn.Module):
         self.positional_encoding = PosEncoding(
             d_model=self.d_model,
             dropout=self.dropout,
+            device=self.device,
         )
 
         sos_token = torch.randn(1, 1, self.d_model, device=self.device)

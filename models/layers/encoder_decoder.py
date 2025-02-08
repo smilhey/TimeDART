@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from attention import MultiheadAttention
+from .attention import MultiheadAttention
 
 
 def generate_partial_mask(seq_len, mask_ratio):
@@ -41,7 +41,7 @@ class TransformerEncoderBlock(nn.Module):
         self, d_model: int, num_heads: int, feedforward_dim: int, dropout: float
     ):
         super().__init__()
-        self.attention = MultiheadAttention(embed_dim=d_model, num_heads=num_heads)
+        self.attention = MultiheadAttention(embed_dim=d_model, num_heads=num_heads, dropout=dropout)
         self.norm1 = nn.LayerNorm(d_model)
         self.ff = nn.Sequential(
             nn.Linear(d_model, feedforward_dim),
@@ -65,7 +65,7 @@ class TransformerEncoderBlock(nn.Module):
         :param mask: [1, 1, seq_len, seq_len]
         :return: [batch_size * num_features, seq_len, d_model]
         """
-        attn_output, _ = self.attention(x, x, x, attn_mask=mask)
+        attn_output = self.attention(x, x, x, mask=mask)
         x = self.norm1(x + self.dropout(attn_output))
         ff_output = self.ff(x)
         output = self.norm2(x + self.dropout(ff_output))
