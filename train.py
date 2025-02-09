@@ -109,7 +109,7 @@ def main():
     if args.finetune:
         assert args.pretrained_model is not None, "Pretrained model not provided"
         checkpoint = torch.load(f"models/{args.pretrained_model}")
-        model = TimeDART(checkpoint["model_args"])
+        model = TimeDART(argparse.Namespace(**checkpoint["model_args"]))
         model.to(args.device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
