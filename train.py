@@ -111,20 +111,20 @@ def main():
     if args.finetune:
         assert args.pretrained_model is not None, "Pretrained model not provided"
         checkpoint = torch.load(f"models/{args.pretrained_model}")
-        model = TimeDART(checkpoint.model_args)
+        model = TimeDART(checkpoint["model_args"])
         model.to(args.device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss()
-
-    
 
     if args.pretrain:
 
         if args.lr_scheduler == "cosine":
             scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.n_epochs)
         elif args.lr_scheduler == "step":
-            scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=args.lr_decay)
+            scheduler = lr_scheduler.StepLR(
+                optimizer, step_size=10, gamma=args.lr_decay
+            )
         elif args.lr_scheduler == "exponential":
             scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=args.lr_decay)
         else:
@@ -180,7 +180,7 @@ def main():
     )
 
     if args.finetune:
-        state = checkpoint.model_state_dict
+        state = checkpoint["model_state_dict"]
         # print(state.keys())
         # print(model.state_dict().keys())
         for key in list(model.state_dict().keys()):
@@ -191,7 +191,6 @@ def main():
                 del state[key]
         model.load_state_dict(state)
 
-
         if args.lr_scheduler == "one_cycle":
             scheduler = lr_scheduler.OneCycleLR(
                 optimizer,
@@ -201,7 +200,6 @@ def main():
             )
         else:
             scheduler = None
-        
 
         print("Finetuning : ")
         for epoch in range(args.n_epochs):
@@ -218,13 +216,13 @@ def main():
                 train_loss.append(loss.item())
 
             if args.lradj == "step" and scheduler:
-                    adjust_learning_rate(
-                        optimizer,
-                        scheduler,
-                        epoch + 1,
-                        args,
-                        printout=False,
-                    )
+                adjust_learning_rate(
+                    optimizer,
+                    scheduler,
+                    epoch + 1,
+                    args,
+                    printout=False,
+                )
 
             train_loss = torch.tensor(train_loss).mean()
             print(
