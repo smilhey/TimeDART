@@ -1,3 +1,5 @@
+import torch.optim.lr_scheduler as lr_scheduler
+
 import os
 import argparse
 import pandas as pd
@@ -52,7 +54,6 @@ parser.add_argument("--pretrained_model", type=str, default=None)
 args = parser.parse_args()
 
 
-
 def main():
     assert args.n_epochs is not None, "Number of epochs not provided"
 
@@ -71,25 +72,51 @@ def main():
     train_data, val_data, test_data = train_val_test_split(data, args.patch_len)
 
     train_dataset = TimeSeriesDataset(train_data, args.input_len, args.pred_len)
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+    )
 
     val_dataset = TimeSeriesDataset(val_data, args.input_len, args.pred_len)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+    )
 
     test_dataset = TimeSeriesDataset(test_data, args.input_len, args.pred_len)
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+    )
 
-    assert not (args.pretrain and args.finetune), "Choose either pretraining or fine-tuning"
-    assert any ([args.pretrain, args.finetune]), "Choose either pretraining or fine-tuning"
+    assert not (
+        args.pretrain and args.finetune
+    ), "Choose either pretraining or fine-tuning"
+    assert any(
+        [args.pretrain, args.finetune]
+    ), "Choose either pretraining or fine-tuning"
     args.task_name = "pretrain" if args.pretrain else "finetune"
     model = TimeDART(args)
     model.to(args.device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss()
-    print('here')
+
+    if args.scheduler == "cosine":
+        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.n_epochs)
+    elif args.scheduler == "step":
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=args.lr_decay)
+    else:
+        scheduler = None
+
     if args.pretrain:
-        print('here2')
+        print("Pretraining : ")
         for epoch in range(args.n_epochs):
             model.train()
             train_loss = []
@@ -101,8 +128,14 @@ def main():
                 loss.backward()
                 optimizer.step()
                 train_loss.append(loss.item())
-            train_loss = torch.tensor(train_loss).mean()         
-            print(f"Epoch: {epoch}, Loss: {train_loss}")
+
+            if scheduler:
+                scheduler.step()
+
+            train_loss = torch.tensor(train_loss).mean()
+            print(
+                f"Epoch: {epoch}, Loss: {train_loss}, LR: {optimizer.param_groups[0]['lr']}"
+            )
 
             if epoch % 5 == 4:
                 model.eval()
@@ -115,7 +148,7 @@ def main():
                         val_loss.append(loss.item())
                     val_loss = torch.tensor(val_loss).mean()
                     print(f"Val Loss: {val_loss}")
-            
+
         model.eval()
         test_loss = []
         with torch.no_grad():
@@ -126,7 +159,6 @@ def main():
                 test_loss.append(loss.item())
             test_loss = torch.tensor(test_loss).mean()
             print(f"Test Loss: {test_loss}")
-    
 
         torch.save(
             model.state_dict(),
@@ -145,6 +177,7 @@ def main():
             if key not in model.state_dict().keys():
                 del state[key]
         model.load_state_dict(state)
+        print("Finetuning : ")
         for epoch in range(args.n_epochs):
             model.train()
             train_loss = []
@@ -152,38 +185,43 @@ def main():
                 optimizer.zero_grad()
                 x = x.to(args.device)
                 y = y.to(args.device)
-                pred_y = model(x)[:, -args.pred_len:]
+                pred_y = model(x)[:, -args.pred_len :]
                 loss = criterion(pred_y, y)
                 loss.backward()
                 optimizer.step()
                 train_loss.append(loss.item())
-            train_loss = torch.mean(torch.tensor(train_loss))
-            print(f"Epoch: {epoch}, Loss: {train_loss}")
-        
+
+            if scheduler:
+                scheduler.step()
+
+            train_loss = torch.tensor(train_loss).mean()
+            print(
+                f"Epoch: {epoch}, Loss: {train_loss}, LR: {optimizer.param_groups[0]['lr']}"
+            )
+
             model.eval()
             val_loss = []
             with torch.no_grad():
                 for x, y in val_dataloader:
                     x = x.to(args.device)
                     y = y.to(args.device)
-                    pred_y = model(x)[:, -args.pred_len:]
+                    pred_y = model(x)[:, -args.pred_len :]
                     loss = criterion(pred_y, y)
                     val_loss.append(loss.item())
                 val_loss = torch.mean(torch.tensor(val_loss))
                 print(f"Val Loss: {val_loss}")
-        
+
         model.eval()
         test_loss = []
         with torch.no_grad():
             for x, y in test_dataloader:
                 x = x.to(args.device)
                 y = y.to(args.device)
-                pred_y = model(x)[:, -args.pred_len:]
+                pred_y = model(x)[:, -args.pred_len :]
                 loss = criterion(pred_y, y)
                 test_loss.append(loss.item())
             test_loss = torch.mean(torch.tensor(test_loss))
             print(f"Test Loss: {test_loss}")
-    
 
     torch.save(
         model.state_dict(),
