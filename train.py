@@ -109,6 +109,7 @@ def main():
     if args.finetune:
         assert args.pretrained_model is not None, "Pretrained model not provided"
         checkpoint = torch.load(f"models/{args.pretrained_model}")
+        checkpoint["model_args"]["pred_len"] = args.pred_len
         model = TimeDART(argparse.Namespace(**checkpoint["model_args"]))
         model.to(args.device)
 
@@ -236,7 +237,7 @@ def main():
                 for x, y in val_dataloader:
                     x = x.to(args.device)
                     y = y.to(args.device)
-                    pred_y = model(x)
+                    pred_y = model(x)[:, -args.pred_len :]
                     loss = criterion(pred_y, y)
                     val_loss.append(loss.item())
                 val_loss = torch.mean(torch.tensor(val_loss))
