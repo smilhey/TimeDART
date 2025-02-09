@@ -129,16 +129,27 @@ def main():
 
     if args.finetune:
         assert args.pretrained_model is not None, "Pretrained model not provided"
-        model.load_state_dict(torch.load(f"models/{args.pretrained_model}"))
+        state = torch.load(f"models/{args.pretrained_model}")
+        # print(state.keys())
+        # print(model.state_dict().keys())
+        for key in list(model.state_dict().keys()):
+            if key not in state.keys():
+                state[key] = model.state_dict()[key].clone()
+        for key in list(state.keys()):
+            if key not in model.state_dict().keys():
+                del state[key]
+        model.load_state_dict(state)
         for epoch in range(args.n_epochs):
             model.train()
             train_loss = []
             for x, y in tqdm(train_dataloader):
+                optimizer.zero_grad()
                 x = x.to(args.device)
                 y = y.to(args.device)
                 pred_y = model(x)[:, -args.pred_len:]
                 loss = criterion(pred_y, y)
                 loss.backward()
+                optimizer.step()
                 train_loss.append(loss.item())
             train_loss = torch.mean(torch.tensor(train_loss))
             print(f"Epoch: {epoch}, Loss: {train_loss}")
