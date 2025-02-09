@@ -1,3 +1,31 @@
+import torch
+from torch.utils.data import Dataset
+from sklearn.preprocessing import StandardScaler
+import argparse
+
+
+class TimeSeriesDataset(Dataset):
+    def __init__(
+        self,
+        data: torch.Tensor,
+        input_len: int,
+        pred_len: int,
+    ):
+        self.data = data
+        scaler = StandardScaler()
+        self.data = torch.tensor(scaler.fit_transform(self.data)).float()
+        self.input_len = input_len
+        self.pred_len = pred_len
+
+    def __len__(self):
+        return self.data.size(0) - (self.input_len + self.pred_len) + 1
+
+    def __getitem__(self, idx):
+        x = self.data[idx : idx + self.input_len]
+        y = self.data[idx + self.input_len : idx + self.input_len + self.pred_len]
+        return x, y
+    
+
 def adjust_learning_rate(optimizer, scheduler, epoch, args, printout=True):
     # lr = args.learning_rate * (0.2 ** (epoch // 2))
     if args.lradj == 'type1':
@@ -35,3 +63,27 @@ def adjust_learning_rate(optimizer, scheduler, epoch, args, printout=True):
             param_group['lr'] = lr
         if printout:
             print('Updating learning rate to {}'.format(lr))
+
+
+def train_val_test_split(data, patch_len, train_size=0.6, val_size=0.2, test_size=0.2):
+    assert train_size + val_size + test_size == 1, "Sizes do not add up to 1"
+    n = len(data)
+    train_end = int(n * train_size)
+    train_end = train_end - (train_end+1) % patch_len
+    val_end = train_end + int(n * val_size)
+    val_end = val_end - (val_end+1) % patch_len
+    train = data[:train_end]
+    val = data[train_end:val_end]
+    test = data[val_end:]
+    return train, val, test
+
+def create_namespace(dict_args):
+    class C:
+        pass
+
+    c = C()
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    for k, v in dict_args.items():
+        parser.add_argument('--' + k, type=int, default=v)
+    parser.parse_args(namespace=c)
+    return c
