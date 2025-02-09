@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 
 from models.TimeDART import Model as TimeDART
-from utils import TimeSeriesDataset, adjust_learning_rate, prepare_data, early_stopping
+from utils import TimeSeriesDataset, adjust_learning_rate, prepare_data, early_stopping, init_random_weights
 from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
@@ -106,11 +106,13 @@ def main():
     model.to(args.device)
     if args.finetune:
         assert args.pretrained_model is not None, "Pretrained model not provided"
-        checkpoint = torch.load(f"models/{args.pretrained_model}")
-        checkpoint["model_args"]["pred_len"] = args.pred_len
-        model = TimeDART(argparse.Namespace(**checkpoint["model_args"]))
-        model.to(args.device)
+        if args.pretrained_model != "random":
+            checkpoint = torch.load(f"models/{args.pretrained_model}")
+            checkpoint["model_args"]["pred_len"] = args.pred_len
+            model = TimeDART(argparse.Namespace(**checkpoint["model_args"]))
+            model.to(args.device)
 
+            
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss()
 
@@ -177,16 +179,21 @@ def main():
         )
 
     if args.finetune:
-        state = checkpoint["model_state_dict"]
-        # print(state.keys())
-        # print(model.state_dict().keys())
-        for key in list(model.state_dict().keys()):
-            if key not in state.keys():
-                state[key] = model.state_dict()[key].clone()
-        for key in list(state.keys()):
-            if key not in model.state_dict().keys():
-                del state[key]
-        model.load_state_dict(state)
+        if args.pretrained_model != "random":
+            state = checkpoint["model_state_dict"]
+            # print(state.keys())
+            # print(model.state_dict().keys())
+            for key in list(model.state_dict().keys()):
+                if key not in state.keys():
+                    state[key] = model.state_dict()[key].clone()
+            for key in list(state.keys()):
+                if key not in model.state_dict().keys():
+                    del state[key]
+            model.load_state_dict(state)
+
+        else:
+            model.apply(init_random_weights)
+
 
         if args.lr_scheduler == "one_cycle":
             scheduler = lr_scheduler.OneCycleLR(
@@ -260,10 +267,16 @@ def main():
             test_loss = torch.mean(torch.tensor(test_loss))
             print(f"Test Loss: {test_loss}")
 
-        torch.save(
-            {"model_state_dict": model.state_dict(), "model_args": vars(args)},
-            f"{PROJECT_ROOT}/models/from_{args.pretrained_model.split('.')[0]}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
-        )
+        if args.pretrained_model != "random":
+            torch.save(
+                {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+                f"{PROJECT_ROOT}/models/from_{args.pretrained_model.split('.')[0]}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+            )
+        else:
+            torch.save(
+                {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+                f"{PROJECT_ROOT}/models/random_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+            )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 import argparse
@@ -107,3 +108,9 @@ def early_stopping(val_loss, best_val_loss, counter):
     else:
         counter += 1
     return best_val_loss, counter
+
+def init_random_weights(m):
+    if type(m) in [nn.Linear, nn.Conv1d, nn.LayerNorm]:
+        nn.init.normal_(m.weight)
+        if m.bias is not None:
+            nn.init.normal_(m.bias)
