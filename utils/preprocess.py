@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-
+from sklearn.preprocessing import StandardScaler
 
 class TimeSeriesDataset(Dataset):
     def __init__(
@@ -10,6 +10,8 @@ class TimeSeriesDataset(Dataset):
         pred_len: int,
     ):
         self.data = data
+        scaler = StandardScaler()
+        self.data = torch.tensor(scaler.fit_transform(self.data)).float()
         self.input_len = input_len
         self.pred_len = pred_len
 

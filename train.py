@@ -195,8 +195,9 @@ def main():
             scheduler = lr_scheduler.OneCycleLR(
                 optimizer,
                 max_lr=args.learning_rate,
-                total_steps=args.n_epochs,
+                steps_per_epoch=len(train_dataloader),
                 pct_start=args.pct_start,
+                epochs=args.n_epochs,
             )
         else:
             scheduler = None
@@ -215,14 +216,16 @@ def main():
                 optimizer.step()
                 train_loss.append(loss.item())
 
-            if args.lradj == "step" and scheduler:
-                adjust_learning_rate(
-                    optimizer,
-                    scheduler,
-                    epoch + 1,
-                    args,
-                    printout=False,
-                )
+                if args.lradj == "step" and scheduler:
+                    adjust_learning_rate(
+                        optimizer,
+                        scheduler,
+                        epoch + 1,
+                        args,
+                        printout=False,
+                    )
+
+                    scheduler.step()
 
             train_loss = torch.tensor(train_loss).mean()
             print(
@@ -235,7 +238,7 @@ def main():
                 for x, y in val_dataloader:
                     x = x.to(args.device)
                     y = y.to(args.device)
-                    pred_y = model(x)[:, -args.pred_len :]
+                    pred_y = model(x)
                     loss = criterion(pred_y, y)
                     val_loss.append(loss.item())
                 val_loss = torch.mean(torch.tensor(val_loss))
