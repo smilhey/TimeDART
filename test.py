@@ -5,8 +5,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from models.TimeDART import Model as TimeDART
-from utils.preprocess import TimeSeriesDataset
-from utils.split import train_val_test_split
+from utils import TimeSeriesDataset, train_val_test_split
 from torch.utils.data import DataLoader
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
