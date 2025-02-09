@@ -8,6 +8,7 @@ import torch
 from models.TimeDART import Model as TimeDART
 from utils.split import train_val_test_split
 from utils.preprocess import TimeSeriesDataset
+from utils.lr_adjust import adjust_learning_rate
 from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
@@ -49,6 +50,8 @@ parser.add_argument("--pred_len", type=int, default=None)
 
 parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--num_workers", type=int, default=1)
+parser.add_argument("--pct_start", type=float, default=0.3)
+parser.add_argument("--lradj", type=str, default="step")
 
 parser.add_argument("--pretrained_model", type=str, default=None)
 
@@ -109,16 +112,19 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss()
 
-    if args.lr_scheduler == "cosine":
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.n_epochs)
-    elif args.lr_scheduler == "step":
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=args.lr_decay)
-    elif args.lr_scheduler == "exponential":
-        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=args.lr_decay)
-    else:
-        scheduler = None
+    
 
     if args.pretrain:
+
+        if args.lr_scheduler == "cosine":
+            scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.n_epochs)
+        elif args.lr_scheduler == "step":
+            scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=args.lr_decay)
+        elif args.lr_scheduler == "exponential":
+            scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=args.lr_decay)
+        else:
+            scheduler = None
+
         print("Pretraining : ")
         for epoch in range(args.n_epochs):
             model.train()
@@ -180,6 +186,19 @@ def main():
             if key not in model.state_dict().keys():
                 del state[key]
         model.load_state_dict(state)
+
+
+        if args.lr_scheduler == "one_cycle":
+            scheduler = lr_scheduler.OneCycleLR(
+                optimizer,
+                max_lr=args.learning_rate,
+                total_steps=args.n_epochs,
+                pct_start=args.pct_start,
+            )
+        else:
+            scheduler = None
+        
+
         print("Finetuning : ")
         for epoch in range(args.n_epochs):
             model.train()
@@ -194,8 +213,14 @@ def main():
                 optimizer.step()
                 train_loss.append(loss.item())
 
-            if scheduler:
-                scheduler.step()
+            if args.lradj == "step" and scheduler:
+                    adjust_learning_rate(
+                        optimizer,
+                        scheduler,
+                        epoch + 1,
+                        args,
+                        printout=False,
+                    )
 
             train_loss = torch.tensor(train_loss).mean()
             print(
