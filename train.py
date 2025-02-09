@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 
 from models.TimeDART import Model as TimeDART
-from utils import TimeSeriesDataset, adjust_learning_rate, train_val_test_split
+from utils import TimeSeriesDataset, adjust_learning_rate, prepare_data
 from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
@@ -71,9 +71,8 @@ def main():
     df.set_index("date", inplace=True)
 
     data = torch.tensor(df.values).float()
-    train_data, val_data, test_data = train_val_test_split(data, args.patch_len)
-
-    train_dataset = TimeSeriesDataset(train_data, args.input_len, args.pred_len)
+    train_dataset, val_dataset, test_dataset = prepare_data(data, args.input_len, args.pred_len, args.batch_size)
+    
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -81,7 +80,6 @@ def main():
         num_workers=args.num_workers,
     )
 
-    val_dataset = TimeSeriesDataset(val_data, args.input_len, args.pred_len)
     val_dataloader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
@@ -89,7 +87,6 @@ def main():
         num_workers=args.num_workers,
     )
 
-    test_dataset = TimeSeriesDataset(test_data, args.input_len, args.pred_len)
     test_dataloader = DataLoader(
         test_dataset,
         batch_size=args.batch_size,

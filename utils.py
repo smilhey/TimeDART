@@ -4,6 +4,20 @@ from sklearn.preprocessing import StandardScaler
 import argparse
 
 
+def prepare_data(data, input_len, pred_len, patch_len, train_size=0.6, val_size=0.2, test_size=0.2):
+    """
+    Prepare data for training, validation, and testing
+    """
+    train_data, val_data, test_data = train_val_test_split(data, patch_len, train_size, val_size, test_size)
+    scaler = StandardScaler()
+    train_data = torch.tensor(scaler.fit_transform(train_data)).float()
+    val_data = torch.tensor(scaler.transform(val_data)).float()
+    test_data = torch.tensor(scaler.transform(test_data)).float()
+    train_dataset = TimeSeriesDataset(train_data, input_len, pred_len)
+    val_dataset = TimeSeriesDataset(val_data, input_len, pred_len)
+    test_dataset = TimeSeriesDataset(test_data, input_len, pred_len)
+    return train_dataset, val_dataset, test_dataset
+
 class TimeSeriesDataset(Dataset):
     def __init__(
         self,
@@ -12,8 +26,6 @@ class TimeSeriesDataset(Dataset):
         pred_len: int,
     ):
         self.data = data
-        scaler = StandardScaler()
-        self.data = torch.tensor(scaler.fit_transform(self.data)).float()
         self.input_len = input_len
         self.pred_len = pred_len
 
