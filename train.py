@@ -174,10 +174,10 @@ def main():
             test_loss = torch.tensor(test_loss).mean()
             print(f"Test Loss: {test_loss}")
 
-    torch.save(
-        {"model_state_dict": model.state_dict(), "model_args": vars(args)},
-        f"{PROJECT_ROOT}/models/from_{args.pretrained_model}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
-    )
+        torch.save(
+            {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+            f"{PROJECT_ROOT}/models/{args.dataset.split('.')[0]}_{args.task_name}.pth",
+        )
 
     if args.finetune:
         state = checkpoint["model_state_dict"]
@@ -256,10 +256,10 @@ def main():
             test_loss = torch.mean(torch.tensor(test_loss))
             print(f"Test Loss: {test_loss}")
 
-    torch.save(
-        {"model_state_dict": model.state_dict(), "model_args": vars(args)},
-        f"{PROJECT_ROOT}/models/from_{args.pretrained_model}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
-    )
+        torch.save(
+            {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+            f"{PROJECT_ROOT}/models/from_{args.pretrained_model.split('.')[0]}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+        )
 
 
 if __name__ == "__main__":
