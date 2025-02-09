@@ -42,6 +42,7 @@ parser.add_argument("--scheduler", type=str, default="cosine")
 parser.add_argument("--pred_len", type=int, default=None)
 
 parser.add_argument("--device", type=str, default="cuda")
+parser.add_argument("--num_workers", type=int, default=1)
 
 args = parser.parse_args()
 
@@ -63,7 +64,7 @@ def main():
 
     data = torch.tensor(df.values).float()
     dataset = TimeSeriesDataset(data, args.input_len, args.pred_len)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
     assert not (args.pretrain and args.finetune), "Choose either pretraining or fine-tuning"
     assert any ([args.pretrain, args.finetune]), "Choose either pretraining or fine-tuning"
