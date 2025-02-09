@@ -44,6 +44,7 @@ parser.add_argument("--mask_ratio", type=float, default=1.0)
 parser.add_argument("--use_norm", action="store_true")
 
 parser.add_argument("--scheduler", type=str, default="cosine")
+parser.add_argument("--lr_scheduler", type=str, default="cosine")
 parser.add_argument("--pred_len", type=int, default=None)
 
 parser.add_argument("--device", type=str, default="cuda")
@@ -108,10 +109,12 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss()
 
-    if args.scheduler == "cosine":
+    if args.lr_scheduler == "cosine":
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.n_epochs)
-    elif args.scheduler == "step":
+    elif args.lr_scheduler == "step":
         scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=args.lr_decay)
+    elif args.lr_scheduler == "exponential":
+        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=args.lr_decay)
     else:
         scheduler = None
 
