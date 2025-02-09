@@ -4,6 +4,7 @@ import pandas as pd
 import torch
 
 from models.TimeDART import Model as TimeDART
+from utils.split import train_val_test_split
 from data.preprocess import TimeSeriesDataset
 from torch.utils.data import DataLoader
 from torch import nn
@@ -63,8 +64,16 @@ def main():
     df.set_index("date", inplace=True)
 
     data = torch.tensor(df.values).float()
-    dataset = TimeSeriesDataset(data, args.input_len, args.pred_len)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    train_data, val_data, test_data = train_val_test_split(data, args.patch_len)
+
+    train_dataset = TimeSeriesDataset(train_data, args.input_len, args.pred_len)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+
+    val_dataset = TimeSeriesDataset(val_data, args.input_len, args.pred_len)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
+
+    test_dataset = TimeSeriesDataset(test_data, args.input_len, args.pred_len)
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     assert not (args.pretrain and args.finetune), "Choose either pretraining or fine-tuning"
     assert any ([args.pretrain, args.finetune]), "Choose either pretraining or fine-tuning"
@@ -80,7 +89,7 @@ def main():
         for epoch in range(args.n_epochs):
             model.train()
             train_loss = []
-            for x, y in tqdm(dataloader):
+            for x, y in tqdm(train_dataloader):
                 optimizer.zero_grad()
                 x = x.to(args.device)
                 pred_x = model(x)
@@ -90,12 +99,37 @@ def main():
                 train_loss.append(loss.item())
             train_loss = torch.tensor(train_loss).mean()         
             print(f"Epoch: {epoch}, Loss: {train_loss}")
+
+            if epoch % 5 == 4:
+                model.eval()
+                val_loss = []
+                with torch.no_grad():
+                    for x, y in val_dataloader:
+                        x = x.to(args.device)
+                        pred_x = model(x)
+                        loss = criterion(pred_x, x)
+                        val_loss.append(loss.item())
+                    val_loss = torch.tensor(val_loss).mean()
+                    print(f"Val Loss: {val_loss}")
+            
+        model.eval()
+        test_loss = []
+        with torch.no_grad():
+            for x, y in test_dataloader:
+                x = x.to(args.device)
+                pred_x = model(x)
+                loss = criterion(pred_x, x)
+                test_loss.append(loss.item())
+            test_loss = torch.tensor(test_loss).mean()
+            print(f"Test Loss: {test_loss}")
     
+        torch.save(model.state_dict(), f"models/{args.dataset.split('.')[0]}_{args.task_name}.pth")
+        
     if args.finetune:
         for epoch in range(args.n_epochs):
             model.train()
             train_loss = []
-            for x, y in tqdm(dataloader):
+            for x, y in tqdm(train_dataloader):
                 x = x.to(args.device)
                 y = y.to(args.device)
                 pred_y = model(x)
