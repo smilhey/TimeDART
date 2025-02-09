@@ -105,6 +105,11 @@ def main():
     args.task_name = "pretrain" if args.pretrain else "finetune"
     model = TimeDART(args)
     model.to(args.device)
+    if args.finetune:
+        assert args.pretrained_model is not None, "Pretrained model not provided"
+        checkpoint = torch.load(f"models/{args.pretrained_model}")
+        model = TimeDART(checkpoint.model_args)
+        model.to(args.device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss()
@@ -163,14 +168,13 @@ def main():
             test_loss = torch.tensor(test_loss).mean()
             print(f"Test Loss: {test_loss}")
 
-        torch.save(
-            model.state_dict(),
-            f"{PROJECT_ROOT}/models/{args.dataset.split('.')[0]}_{args.task_name}.pth",
-        )
+    torch.save(
+        {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+        f"{PROJECT_ROOT}/models/from_{args.pretrained_model}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+    )
 
     if args.finetune:
-        assert args.pretrained_model is not None, "Pretrained model not provided"
-        state = torch.load(f"models/{args.pretrained_model}")
+        state = checkpoint.model_state_dict
         # print(state.keys())
         # print(model.state_dict().keys())
         for key in list(model.state_dict().keys()):
@@ -227,7 +231,7 @@ def main():
             print(f"Test Loss: {test_loss}")
 
     torch.save(
-        model.state_dict(),
+        {"model_state_dict": model.state_dict(), "model_args": vars(args)},
         f"{PROJECT_ROOT}/models/from_{args.pretrained_model}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
     )
 
