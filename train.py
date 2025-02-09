@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 
 from models.TimeDART import Model as TimeDART
-from utils import TimeSeriesDataset, adjust_learning_rate, prepare_data
+from utils import TimeSeriesDataset, adjust_learning_rate, prepare_data, early_stopping
 from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
@@ -50,6 +50,7 @@ parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--num_workers", type=int, default=1)
 parser.add_argument("--pct_start", type=float, default=0.3)
 parser.add_argument("--lradj", type=str, default="step")
+parser.add_argument("--patience", type=int, default=3)
 
 parser.add_argument("--pretrained_model", type=str, default=None)
 
@@ -199,6 +200,8 @@ def main():
             scheduler = None
 
         print("Finetuning : ")
+        best_val_loss = float("inf")
+        counter = 0
         for epoch in range(args.n_epochs):
             model.train()
             train_loss = []
@@ -239,6 +242,11 @@ def main():
                     val_loss.append(loss.item())
                 val_loss = torch.mean(torch.tensor(val_loss))
                 print(f"Val Loss: {val_loss}")
+
+            best_val_loss, counter = early_stopping(val_loss, best_val_loss, counter)
+            if counter >= args.patience:
+                print("Early stopping")
+                break
 
         model.eval()
         test_loss = []

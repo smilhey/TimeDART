@@ -99,3 +99,11 @@ def create_namespace(dict_args):
         parser.add_argument('--' + k, type=int, default=v)
     parser.parse_args(namespace=c)
     return c
+
+def early_stopping(val_loss, best_val_loss, counter):
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        counter = 0
+    else:
+        counter += 1
+    return best_val_loss, counter
