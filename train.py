@@ -55,6 +55,8 @@ def main():
 
     args.head_dropout = args.dropout
 
+    torch.cuda.empty_cache()
+
     assert os.path.exists(f"data/{args.dataset}"), "Dataset not found"
     df = pd.read_csv(f"data/{args.dataset}")
     df.set_index("date", inplace=True)
