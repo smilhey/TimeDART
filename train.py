@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
 
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--dataset", type=str, default="ETTh1.csv")
@@ -61,8 +63,8 @@ def main():
 
     torch.cuda.empty_cache()
 
-    assert os.path.exists(f"data/{args.dataset}"), "Dataset not found"
-    df = pd.read_csv(f"data/{args.dataset}")
+    assert os.path.exists(f"{PROJECT_ROOT}/data/{args.dataset}"), "Dataset not found"
+    df = pd.read_csv(f"{PROJECT_ROOT}/data/{args.dataset}")
     df.set_index("date", inplace=True)
 
     data = torch.tensor(df.values).float()
@@ -125,7 +127,11 @@ def main():
             test_loss = torch.tensor(test_loss).mean()
             print(f"Test Loss: {test_loss}")
     
-        torch.save(model.state_dict(), f"models/{args.dataset.split('.')[0]}_{args.task_name}.pth")
+
+        torch.save(
+            model.state_dict(),
+            f"{PROJECT_ROOT}/models/{args.dataset.split('.')[0]}_{args.task_name}.pth",
+        )
 
     if args.finetune:
         assert args.pretrained_model is not None, "Pretrained model not provided"
@@ -178,7 +184,12 @@ def main():
             test_loss = torch.mean(torch.tensor(test_loss))
             print(f"Test Loss: {test_loss}")
     
-    torch.save(model.state_dict(), f"models/from_{args.pretrained_model}_{args.dataset.split('.')[0]}_{args.task_name}.pth")
+
+    torch.save(
+        model.state_dict(),
+        f"{PROJECT_ROOT}/models/from_{args.pretrained_model}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+    )
+
 
 if __name__ == "__main__":
     main()
