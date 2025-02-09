@@ -23,9 +23,9 @@ parser.add_argument("--dropout", type=float, default=0.1)
 
 parser.add_argument("--time_steps", type=int, default=1000)
 
-parser.add_argument("--d_model", type=int, default=512)
-parser.add_argument("--n_heads", type=int, default=8)
-parser.add_argument("--d_ff", type=int, default=2048)
+parser.add_argument("--d_model", type=int, default=32)
+parser.add_argument("--n_heads", type=int, default=16)
+parser.add_argument("--d_ff", type=int, default=64)
 parser.add_argument("--patch_len", type=int, default=2)
 
 parser.add_argument("--e_layers", type=int, default=2)
