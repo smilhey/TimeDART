@@ -78,13 +78,14 @@ def main():
             model.train()
             train_loss = []
             for x, y in tqdm(dataloader):
+                optimizer.zero_grad()
                 x = x.to(args.device)
                 pred_x = model(x)
                 loss = criterion(pred_x, x)
+                loss.backward()
+                optimizer.step()
                 train_loss.append(loss.item())
-            train_loss = torch.mean(torch.tensor(train_loss))
-            train_loss.backward()
-            optimizer.step()
+            train_loss = torch.tensor(train_loss).mean()         
             print(f"Epoch: {epoch}, Loss: {train_loss}")
     
     if args.finetune:
