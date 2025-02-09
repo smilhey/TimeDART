@@ -18,5 +18,5 @@ class TimeSeriesDataset(Dataset):
 
     def __getitem__(self, idx):
         x = self.data[idx : idx + self.input_len]
-        y = self.data[idx + self.pred_len : idx + self.input_len + self.pred_len]
+        y = self.data[idx + self.input_len : idx + self.input_len + self.pred_len]
         return x, y

@@ -5,7 +5,7 @@ import torch
 
 from models.TimeDART import Model as TimeDART
 from utils.split import train_val_test_split
-from data.preprocess import TimeSeriesDataset
+from utils.preprocess import TimeSeriesDataset
 from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
@@ -44,6 +44,8 @@ parser.add_argument("--pred_len", type=int, default=None)
 
 parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--num_workers", type=int, default=1)
+
+parser.add_argument("--pretrained_model", type=str, default=None)
 
 args = parser.parse_args()
 
@@ -124,20 +126,48 @@ def main():
             print(f"Test Loss: {test_loss}")
     
         torch.save(model.state_dict(), f"models/{args.dataset.split('.')[0]}_{args.task_name}.pth")
-        
+
     if args.finetune:
+        assert args.pretrained_model is not None, "Pretrained model not provided"
+        model.load_state_dict(torch.load(f"models/{args.pretrained_model}"))
         for epoch in range(args.n_epochs):
             model.train()
             train_loss = []
             for x, y in tqdm(train_dataloader):
                 x = x.to(args.device)
                 y = y.to(args.device)
-                pred_y = model(x)
+                pred_y = model(x)[:, -args.pred_len:]
                 loss = criterion(pred_y, y)
                 loss.backward()
                 train_loss.append(loss.item())
             train_loss = torch.mean(torch.tensor(train_loss))
             print(f"Epoch: {epoch}, Loss: {train_loss}")
+        
+            model.eval()
+            val_loss = []
+            with torch.no_grad():
+                for x, y in val_dataloader:
+                    x = x.to(args.device)
+                    y = y.to(args.device)
+                    pred_y = model(x)[:, -args.pred_len:]
+                    loss = criterion(pred_y, y)
+                    val_loss.append(loss.item())
+                val_loss = torch.mean(torch.tensor(val_loss))
+                print(f"Val Loss: {val_loss}")
+        
+        model.eval()
+        test_loss = []
+        with torch.no_grad():
+            for x, y in test_dataloader:
+                x = x.to(args.device)
+                y = y.to(args.device)
+                pred_y = model(x)[:, -args.pred_len:]
+                loss = criterion(pred_y, y)
+                test_loss.append(loss.item())
+            test_loss = torch.mean(torch.tensor(test_loss))
+            print(f"Test Loss: {test_loss}")
+    
+    torch.save(model.state_dict(), f"models/from_{args.pretrained_model}_{args.dataset.split('.')[0]}_{args.task_name}.pth")
 
 if __name__ == "__main__":
     main()
