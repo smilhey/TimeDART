@@ -79,6 +79,7 @@ def main():
             alpha=0.5,
         )
         ax.plot(
+            range(args.input_len, args.input_len +len(predictions)),
             predictions[:, feature_idx],
             label="Pred",
             alpha=0.8,

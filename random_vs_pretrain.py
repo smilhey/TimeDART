@@ -96,11 +96,13 @@ def main():
             alpha=0.5,
         )
         ax.plot(
+            range(args.input_len, args.input_len +len(predictions)),
             predictions[:, feature_idx],
             label="Pretrain Pred",
             alpha=0.8,
         )
         ax.plot(
+            range(args.input_len, args.input_len +len(predictions)),
             random_predictions[:, feature_idx],
             label="Random Pred",
             alpha=0.8,
