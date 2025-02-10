@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 
 from models.TimeDART import Model as TimeDART
+from models.TCN import Model as TCN
 from utils import TimeSeriesDataset, adjust_learning_rate, prepare_data, early_stopping, init_random_weights
 from torch.utils.data import DataLoader
 from torch import nn
@@ -53,6 +54,7 @@ parser.add_argument("--lradj", type=str, default="step")
 parser.add_argument("--patience", type=int, default=3)
 
 parser.add_argument("--pretrained_model", type=str, default=None)
+parser.add_argument("--model_name", type=str, default="TimeDART")
 
 args = parser.parse_args()
 
@@ -102,16 +104,23 @@ def main():
         [args.pretrain, args.finetune]
     ), "Choose either pretraining or fine-tuning"
     args.task_name = "pretrain" if args.pretrain else "finetune"
-    model = TimeDART(args)
+    if args.model_name == "TimeDART":
+        model = TimeDART(args)
+    elif args.model_name == "TCN":
+        model = TCN(args)
     model.to(args.device)
+
     if args.finetune:
-        assert args.pretrained_model is not None, "Pretrained model not provided"
-        if args.pretrained_model != "random":
-            checkpoint = torch.load(f"models/{args.pretrained_model}")
-            checkpoint["model_args"]["pred_len"] = args.pred_len
-            finetune_args = argparse.Namespace(**checkpoint["model_args"])
-            model = TimeDART(finetune_args)
-            model.to(args.device)
+            assert args.pretrained_model is not None, "Pretrained model not provided"
+            if args.pretrained_model != "random":
+                checkpoint = torch.load(f"models/{args.pretrained_model}")
+                checkpoint["model_args"]["pred_len"] = args.pred_len
+                finetune_args = argparse.Namespace(**checkpoint["model_args"])
+                if args.model_name == "TimeDART":
+                    model = TimeDART(finetune_args)
+                elif args.model_name == "TCN":
+                    model = TCN(finetune_args)
+                model.to(args.device)
 
             
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
