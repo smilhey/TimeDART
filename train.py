@@ -197,9 +197,11 @@ def main():
 
     if args.finetune:
         if args.finetune_loss == "mse":
-            criterion = nn.MSELoss()
+            train_criterion = nn.MSELoss()
         elif args.finetune_loss == "huber":
-            criterion = nn.HuberLoss()
+            train_criterion = nn.HuberLoss()
+        else:
+            train_criterion = criterion
         if args.pretrained_model != "random":
             state = checkpoint["model_state_dict"]
             # print(state.keys())
@@ -238,7 +240,7 @@ def main():
                 x = x.to(args.device)
                 y = y.to(args.device)
                 pred_y = model(x)[:, -args.pred_len :]
-                loss = criterion(pred_y, y)
+                loss = train_criterion(pred_y, y)
                 loss.backward()
                 optimizer.step()
                 train_loss.append(loss.item())
