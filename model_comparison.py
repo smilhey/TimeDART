@@ -1,3 +1,5 @@
+"""For different TimeDARTs comparison"""
+
 from tqdm import tqdm
 import numpy as np
 import os
@@ -14,8 +16,10 @@ PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", type=str, default="ETTh1.csv")
-parser.add_argument("--pretrained_model", type=str, required=True)
-parser.add_argument("--random_init_model", type=str, required=True)
+parser.add_argument("--model_1", type=str, required=True)
+parser.add_argument("--model_2", type=str, required=True)
+parser.add_argument("--name_1", type=str, default="Classic TimeDART")
+parser.add_argument("--name_2", type=str, default="Random")
 parser.add_argument("--input_len", type=int, default=336)
 parser.add_argument("--pred_len", type=int, default=336)
 parser.add_argument("--batch_size", type=int, default=16)
@@ -38,47 +42,47 @@ def main():
     dataset = StrideTimeSeriesDataset(data, args.pred_len, args.input_len)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
 
-    checkpoint = torch.load(
-        f"{PROJECT_ROOT}/models/{args.pretrained_model}", weights_only=False
+    checkpoint_1 = torch.load(
+        f"{PROJECT_ROOT}/models/{args.model_1}", weights_only=False
     )
 
-    model_args = argparse.Namespace(**checkpoint["model_args"])
+    model_1_args = argparse.Namespace(**checkpoint_1["model_args"])
 
-    model = TimeDART(model_args)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.to(args.device)
-    model.eval()
+    model_1 = TimeDART(model_1_args)
+    model_1.load_state_dict(checkpoint_1["model_state_dict"])
+    model_1.to(args.device)
+    model_1.eval()
 
-    random_checkpoint = torch.load(
-        f"{PROJECT_ROOT}/models/{args.random_init_model}", weights_only=False
+    checkpoint_2 = torch.load(
+        f"{PROJECT_ROOT}/models/{args.model_2}", weights_only=False
     )
 
-    random_model_args = argparse.Namespace(**random_checkpoint["model_args"])
-    random_model = TimeDART(random_model_args)
-    random_model.load_state_dict(random_checkpoint["model_state_dict"])
-    random_model.to(args.device)
-    random_model.eval()
+    model_2_args = argparse.Namespace(**checkpoint_2["model_args"])
+    model_2 = TimeDART(model_2_args)
+    model_2.load_state_dict(checkpoint_2["model_state_dict"])
+    model_2.to(args.device)
+    model_2.eval()
 
-    predictions = []
-    random_predictions = []
+    predictions_1 = []
+    predictions_2 = []
 
     with torch.no_grad():
         for x in tqdm((dataloader)):
             x = x.to(args.device)
-            pred_x = (
-                model(x)[:, -args.pred_len :].cpu().numpy()
+            pred_x_1 = (
+                model_1(x)[:, -args.pred_len :].cpu().numpy()
             )  # [batch, pred_len, num_features]
-            random_pred_x = (
-                random_model(x)[:, -args.pred_len :].cpu().numpy()
+            pred_x_2 = (
+                model_2(x)[:, -args.pred_len :].cpu().numpy()
             )  # [batch, pred_len, num_features]
-            predictions.append(np.concatenate(pred_x, axis=0))
-            random_predictions.append(np.concatenate(random_pred_x, axis=0))
+            predictions_1.append(np.concatenate(pred_x_1, axis=0))
+            predictions_2.append(np.concatenate(pred_x_2, axis=0))
 
-    predictions = np.concatenate(predictions, axis=0)
-    random_predictions = np.concatenate(random_predictions, axis=0)
-    print(predictions.shape)
+    predictions_1 = np.concatenate(predictions_1, axis=0)
+    predictions_2 = np.concatenate(predictions_2, axis=0)
+    # print(predictions.shape)
     actuals = data.numpy()
-    print(actuals.shape)
+    # print(actuals.shape)
 
     fig, axes = plt.subplots(
         num_features, 1, figsize=(14, 3 * num_features), sharex=True
@@ -96,19 +100,19 @@ def main():
             alpha=0.5,
         )
         ax.plot(
-            range(args.input_len, args.input_len +len(predictions)),
-            predictions[:, feature_idx],
-            label="Pretrain Pred",
+            range(args.input_len, args.input_len +len(predictions_1)),
+            predictions_1[:, feature_idx],
+            label=f"Pred ({args.name_1})",
             alpha=0.8,
         )
         ax.plot(
-            range(args.input_len, args.input_len +len(predictions)),
-            random_predictions[:, feature_idx],
-            label="Random Pred",
+            range(args.input_len, args.input_len +len(predictions_2)),
+            predictions_2[:, feature_idx],
+            label=f"Pred ({args.name_2})",
             alpha=0.8,
         )
         ax.set_ylabel(df.columns[feature_idx])
-        for i in range(0, len(predictions), args.pred_len):
+        for i in range(0, len(predictions_1), args.pred_len):
             ax.axvline(x=args.input_len + i, color="red", linestyle="--", alpha=0.25, label=f"Prediction Boundary ({args.pred_len} steps)")
             if feature_idx == 0 and i == 0:
                 ax.legend(draggable=True)
