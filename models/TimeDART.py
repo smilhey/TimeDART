@@ -177,6 +177,9 @@ class Model(nn.Module):
             x_embedding
         )  # [batch_size * num_features, seq_len, d_model]
         x_embedding_bias = self.positional_encoding(x_embedding_bias)
+        # x_out = self.encoder(
+        #     x_embedding_bias,
+        # )  # [batch_size * num_features, seq_len, d_model]
         x_out = self.encoder(
             x_embedding_bias,
             is_mask=True,
@@ -232,6 +235,9 @@ class Model(nn.Module):
         x = self.patch(x)  # [batch_size * num_features, seq_len, patch_len]
         x = self.enc_embedding(x)  # [batch_size * num_features, seq_len, d_model]
         x = self.positional_encoding(x)  # [batch_size * num_features, seq_len, d_model]
+        # x = self.encoder(
+        #     x,
+        # )  # [batch_size * num_features, seq_len, d_model]
         x = self.encoder(
             x,
             is_mask=False,
