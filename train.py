@@ -109,7 +109,8 @@ def main():
         if args.pretrained_model != "random":
             checkpoint = torch.load(f"models/{args.pretrained_model}")
             checkpoint["model_args"]["pred_len"] = args.pred_len
-            model = TimeDART(argparse.Namespace(**checkpoint["model_args"]))
+            finetune_args = argparse.Namespace(**checkpoint["model_args"])
+            model = TimeDART(finetune_args)
             model.to(args.device)
 
             
@@ -269,7 +270,7 @@ def main():
 
         if args.pretrained_model != "random":
             torch.save(
-                {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+                {"model_state_dict": model.state_dict(), "model_args": vars(finetune_args)},
                 f"{PROJECT_ROOT}/models/from_{args.pretrained_model.split('.')[0]}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
             )
         else:

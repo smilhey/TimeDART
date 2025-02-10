@@ -7,7 +7,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from models.TimeDART import Model as TimeDART
-from utils import StrideTimeSeriesDataset
+from utils import StrideTimeSeriesDataset, load_test_data
 from torch.utils.data import DataLoader
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -30,6 +30,9 @@ def main():
     data = torch.tensor(df.values).float()
     num_features = data.shape[1]
 
+    _,_, data = load_test_data(data)
+
+
     dataset = StrideTimeSeriesDataset(data, args.input_len)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
 
@@ -38,6 +41,7 @@ def main():
     )
 
     model_args = argparse.Namespace(**checkpoint["model_args"])
+
     model = TimeDART(model_args)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(args.device)

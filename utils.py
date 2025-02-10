@@ -23,6 +23,13 @@ def prepare_data(
     test_dataset = TimeSeriesDataset(test_data, input_len, pred_len)
     return train_dataset, val_dataset, test_dataset
 
+def load_test_data(data, patch_len=2, train_size = 0.6, val_size = 0.2, test_size = 0.2):
+    train_data, val_data, test_data = train_val_test_split(data, patch_len, train_size, val_size, test_size)
+    scaler = StandardScaler()
+    train_data = torch.tensor(scaler.fit_transform(train_data)).float()
+    val_data = torch.tensor(scaler.transform(val_data)).float()
+    test_data = torch.tensor(scaler.transform(test_data)).float()
+    return train_data, val_data, test_data
 
 class TimeSeriesDataset(Dataset):
     def __init__(
