@@ -1,0 +1,37 @@
+For ETTh1 dataset, used parameters were: 
+    --input_len 336 
+    --e_layers 2
+    --d_layers 1 
+    --enc_in 7 
+    --dec_in 7 
+    --c_out 7 
+    --n_heads 8
+    --d_model 32
+    --d_ff 64
+    --patch_len 2 
+    --dropout 0.1
+    --time_steps 1000
+    --scheduler cosine
+    --lr_decay 0.95
+    --learning_rate 0.0001
+    --batch_size 16 
+    --train_epochs 50 
+
+For ETTh2 dataset, used parameters were: 
+    --input_len 336 
+    --e_layers 2
+    --d_layers 1 
+    --enc_in 7 
+    --dec_in 7 
+    --c_out 7 
+    --n_heads 8
+    --d_model 8
+    --d_ff 32
+    --patch_len 2 
+    --dropout 0.1
+    --time_steps 1000
+    --scheduler cosine
+    --lr_decay 0.95
+    --learning_rate 0.0001
+    --batch_size 16
+    --train_epochs 50 
