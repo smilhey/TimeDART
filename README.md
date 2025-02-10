@@ -1,8 +1,5 @@
 # Time Series Forecasting
 
-![Python](https://img.shields.io/badge/Python-3.7%2B-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)
-
 A project for time series forecasting featuring TimeDART (Transformer-based) and TCN models, supporting pretraining, fine-tuning, and visual comparisons.
 
 ## Table of Contents
@@ -10,20 +7,17 @@ A project for time series forecasting featuring TimeDART (Transformer-based) and
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Training](#training)
-  - [Evaluation](#evaluation)
-  - [Comparisons](#comparisons)
 
 ---
 
 ## Features
 
-- 🚀 **Two Model Architectures**
-  - TimeDART: Transformer-based with patching
-  - TCN: Temporal Convolutional Network
-- 🔄 **Training Modes**
-  - Masked pretraining
-  - Fine-tuning with MSE/Huber loss
+- **Two Model Architectures**
+  -- TimeDART: Transformer-based with patching
+  -- TCN: Temporal Convolutional Network
+- **Training Modes**
+  -- Masked pretraining
+  -- Fine-tuning with MSE/Huber loss
 
 ---
 
