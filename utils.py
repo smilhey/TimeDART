@@ -5,11 +5,15 @@ from sklearn.preprocessing import StandardScaler
 import argparse
 
 
-def prepare_data(data, input_len, pred_len, patch_len, train_size=0.6, val_size=0.2, test_size=0.2):
+def prepare_data(
+    data, input_len, pred_len, patch_len, train_size=0.6, val_size=0.2, test_size=0.2
+):
     """
     Prepare data for training, validation, and testing
     """
-    train_data, val_data, test_data = train_val_test_split(data, patch_len, train_size, val_size, test_size)
+    train_data, val_data, test_data = train_val_test_split(
+        data, patch_len, train_size, val_size, test_size
+    )
     scaler = StandardScaler()
     train_data = torch.tensor(scaler.fit_transform(train_data)).float()
     val_data = torch.tensor(scaler.transform(val_data)).float()
@@ -18,6 +22,7 @@ def prepare_data(data, input_len, pred_len, patch_len, train_size=0.6, val_size=
     val_dataset = TimeSeriesDataset(val_data, input_len, pred_len)
     test_dataset = TimeSeriesDataset(test_data, input_len, pred_len)
     return train_dataset, val_dataset, test_dataset
+
 
 class TimeSeriesDataset(Dataset):
     def __init__(
@@ -37,33 +42,60 @@ class TimeSeriesDataset(Dataset):
         x = self.data[idx : idx + self.input_len]
         y = self.data[idx + self.input_len : idx + self.input_len + self.pred_len]
         return x, y
-    
+
+
+class StrideTimeSeriesDataset(Dataset):
+    def __init__(self, data, stride):
+        self.data = data
+        self.stride = stride
+
+        self.indices = list(range(0, len(data) - stride, stride))
+
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, idx):
+        start_idx = self.indices[idx]
+        x = self.data[start_idx : start_idx + self.stride]
+        return x
+
 
 def adjust_learning_rate(optimizer, scheduler, epoch, args, printout=True):
     # lr = args.learning_rate * (0.2 ** (epoch // 2))
-    if args.lradj == 'type1':
+    if args.lradj == "type1":
         lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}
-    elif args.lradj == 'type2':
+    elif args.lradj == "type2":
+        lr_adjust = {2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6, 10: 5e-7, 15: 1e-7, 20: 5e-8}
+    elif args.lradj == "type3":
         lr_adjust = {
-            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
-            10: 5e-7, 15: 1e-7, 20: 5e-8
+            epoch: (
+                args.learning_rate
+                if epoch < 1
+                else args.learning_rate * (0.9 ** ((epoch - 3) // 1))
+            )
         }
-    elif args.lradj == 'type3':
-        lr_adjust = {epoch: args.learning_rate if epoch < 1 else args.learning_rate * (0.9 ** ((epoch - 3) // 1))}
-    elif args.lradj == 'constant':
+    elif args.lradj == "constant":
         lr_adjust = {epoch: args.learning_rate}
-    elif args.lradj == '3':
-        lr_adjust = {epoch: args.learning_rate if epoch < 10 else args.learning_rate * 0.1}
-    elif args.lradj == '4':
-        lr_adjust = {epoch: args.learning_rate if epoch < 15 else args.learning_rate * 0.1}
-    elif args.lradj == '5':
-        lr_adjust = {epoch: args.learning_rate if epoch < 25 else args.learning_rate * 0.1}
-    elif args.lradj == '6':
-        lr_adjust = {epoch: args.learning_rate if epoch < 5 else args.learning_rate * 0.1}
-    elif args.lradj == 'TST':
+    elif args.lradj == "3":
+        lr_adjust = {
+            epoch: args.learning_rate if epoch < 10 else args.learning_rate * 0.1
+        }
+    elif args.lradj == "4":
+        lr_adjust = {
+            epoch: args.learning_rate if epoch < 15 else args.learning_rate * 0.1
+        }
+    elif args.lradj == "5":
+        lr_adjust = {
+            epoch: args.learning_rate if epoch < 25 else args.learning_rate * 0.1
+        }
+    elif args.lradj == "6":
+        lr_adjust = {
+            epoch: args.learning_rate if epoch < 5 else args.learning_rate * 0.1
+        }
+    elif args.lradj == "TST":
         lr_adjust = {epoch: scheduler.get_last_lr()[0]}
     elif args.lradj == "decay":
-        lr_adjust = {epoch: args.learning_rate * (args.lr_decay ** ((epoch - 1) // 1)) }
+        lr_adjust = {epoch: args.learning_rate * (args.lr_decay ** ((epoch - 1) // 1))}
     elif args.lradj == "step":
         lr_adjust = {epoch: scheduler.get_last_lr()[0]}
     elif args.lradj == "exp":
@@ -73,33 +105,35 @@ def adjust_learning_rate(optimizer, scheduler, epoch, args, printout=True):
     if epoch in lr_adjust.keys():
         lr = lr_adjust[epoch]
         for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
+            param_group["lr"] = lr
         if printout:
-            print('Updating learning rate to {}'.format(lr))
+            print("Updating learning rate to {}".format(lr))
 
 
 def train_val_test_split(data, patch_len, train_size=0.6, val_size=0.2, test_size=0.2):
     assert train_size + val_size + test_size == 1, "Sizes do not add up to 1"
     n = len(data)
     train_end = int(n * train_size)
-    train_end = train_end - (train_end+1) % patch_len
+    train_end = train_end - (train_end + 1) % patch_len
     val_end = train_end + int(n * val_size)
-    val_end = val_end - (val_end+1) % patch_len
+    val_end = val_end - (val_end + 1) % patch_len
     train = data[:train_end]
     val = data[train_end:val_end]
     test = data[val_end:]
     return train, val, test
+
 
 def create_namespace(dict_args):
     class C:
         pass
 
     c = C()
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description="Process some integers.")
     for k, v in dict_args.items():
-        parser.add_argument('--' + k, type=int, default=v)
+        parser.add_argument("--" + k, type=int, default=v)
     parser.parse_args(namespace=c)
     return c
+
 
 def early_stopping(val_loss, best_val_loss, counter):
     if val_loss < best_val_loss:
@@ -109,8 +143,10 @@ def early_stopping(val_loss, best_val_loss, counter):
         counter += 1
     return best_val_loss, counter
 
+
 def init_random_weights(m):
     if type(m) in [nn.Linear, nn.Conv1d, nn.LayerNorm]:
         nn.init.normal_(m.weight)
         if m.bias is not None:
             nn.init.normal_(m.bias)
+
