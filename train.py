@@ -183,10 +183,16 @@ def main():
             test_loss = torch.tensor(test_loss).mean()
             print(f"Test Loss: {test_loss}")
 
-        torch.save(
-            {"model_state_dict": model.state_dict(), "model_args": vars(args)},
-            f"{PROJECT_ROOT}/models/{args.dataset.split('.')[0]}_{args.task_name}.pth",
-        )
+        if args.model_name == "TimeDART":
+            torch.save(
+                {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+                f"{PROJECT_ROOT}/models/{args.dataset.split('.')[0]}_{args.task_name}.pth",
+            )
+        elif args.model_name == "TCN":
+            torch.save(
+                {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+                f"{PROJECT_ROOT}/models/TCN_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+            )
 
     if args.finetune:
         if args.pretrained_model != "random":
@@ -276,17 +282,28 @@ def main():
                 test_loss.append(loss.item())
             test_loss = torch.mean(torch.tensor(test_loss))
             print(f"Test Loss: {test_loss}")
-
-        if args.pretrained_model != "random":
-            torch.save(
-                {"model_state_dict": model.state_dict(), "model_args": vars(finetune_args)},
-                f"{PROJECT_ROOT}/models/from_{args.pretrained_model.split('.')[0]}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
-            )
-        else:
-            torch.save(
-                {"model_state_dict": model.state_dict(), "model_args": vars(args)},
-                f"{PROJECT_ROOT}/models/random_{args.dataset.split('.')[0]}_{args.task_name}.pth",
-            )
+        if args.model_name == "TimeDART":
+            if args.pretrained_model != "random":
+                torch.save(
+                    {"model_state_dict": model.state_dict(), "model_args": vars(finetune_args)},
+                    f"{PROJECT_ROOT}/models/from_{args.pretrained_model.split('.')[0]}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+                )
+            else:
+                torch.save(
+                    {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+                    f"{PROJECT_ROOT}/models/random_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+                )
+        elif args.model_name == "TCN":
+            if args.pretrained_model != "random":
+                torch.save(
+                    {"model_state_dict": model.state_dict(), "model_args": vars(finetune_args)},
+                    f"{PROJECT_ROOT}/models/TCN_from_{args.pretrained_model.split('.')[0]}_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+                )
+            else:
+                torch.save(
+                    {"model_state_dict": model.state_dict(), "model_args": vars(args)},
+                    f"{PROJECT_ROOT}/models/TCN_random_{args.dataset.split('.')[0]}_{args.task_name}.pth",
+                )
 
 
 if __name__ == "__main__":
