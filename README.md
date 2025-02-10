@@ -12,12 +12,12 @@ A project for time series forecasting featuring TimeDART (Transformer-based) and
 
 ## Features
 
-- **Two Model Architectures**
-  -- TimeDART: Transformer-based with patching
-  -- TCN: Temporal Convolutional Network
-- **Training Modes**
-  -- Masked pretraining
-  -- Fine-tuning with MSE/Huber loss
+- 🚀 **Two Model Architectures**
+  - TimeDART: Transformer-based with patching
+  - TCN: Temporal Convolutional Network
+- 🔄 **Training Modes**
+  - Masked pretraining
+  - Fine-tuning with MSE/Huber loss
 
 ---
 
