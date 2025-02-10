@@ -52,18 +52,19 @@ class TimeSeriesDataset(Dataset):
 
 
 class StrideTimeSeriesDataset(Dataset):
-    def __init__(self, data, stride):
+    def __init__(self, data, stride, input_len):
         self.data = data
         self.stride = stride
+        self.input_len = input_len
 
-        self.indices = list(range(0, len(data) - stride, stride))
+        self.indices = list(range(0, len(data) - input_len, stride))
 
     def __len__(self):
         return len(self.indices)
 
     def __getitem__(self, idx):
         start_idx = self.indices[idx]
-        x = self.data[start_idx : start_idx + self.stride]
+        x = self.data[start_idx : start_idx + self.input_len]
         return x
 
 

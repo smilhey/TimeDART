@@ -31,9 +31,10 @@ def main():
     num_features = data.shape[1]
 
     _,_, data = load_test_data(data)
+    print(data.shape)
 
 
-    dataset = StrideTimeSeriesDataset(data, args.input_len)
+    dataset = StrideTimeSeriesDataset(data, args.pred_len, args.input_len)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
 
     checkpoint = torch.load(
@@ -58,7 +59,9 @@ def main():
             predictions.append(np.concatenate(pred_x, axis=0))
 
     predictions = np.concatenate(predictions, axis=0)
+    print(predictions.shape)
     actuals = data.numpy()
+    print(actuals.shape)
 
     fig, axes = plt.subplots(
         num_features, 1, figsize=(14, 3 * num_features), sharex=True
