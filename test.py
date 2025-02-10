@@ -7,6 +7,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from models.TimeDART import Model as TimeDART
+from models.TCN import Model as TCN
 from utils import StrideTimeSeriesDataset, load_test_data
 from torch.utils.data import DataLoader
 
@@ -19,6 +20,7 @@ parser.add_argument("--input_len", type=int, default=336)
 parser.add_argument("--pred_len", type=int, default=336)
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--device", type=str, default="cuda")
+parser.add_argument("--model_name", type=str, default="TimeDART")
 args = parser.parse_args()
 
 
@@ -42,8 +44,10 @@ def main():
     )
 
     model_args = argparse.Namespace(**checkpoint["model_args"])
-
-    model = TimeDART(model_args)
+    if args.model_name == "TimeDART":
+        model = TimeDART(model_args)
+    elif args.model_name == "TCN":
+        model = TCN(model_args)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(args.device)
     model.eval()
