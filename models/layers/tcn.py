@@ -100,12 +100,25 @@ class TCNDecoder(nn.Module):
         self.output_layer = nn.Conv1d(self.d_model, 1, kernel_size=1)
 
     def forward(self, x):
-        # Forward pass through each convolutional layer
+        x = x.permute(
+            0, 2, 1
+        )  # (batch_size, seq_len, d_model) -> (batch_size, d_model, seq_len)
+
+        batch_size, d_model, seq_len = x.shape
+
+        # Apply convolutions with dropout
         for conv in self.convs:
             x = conv(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
 
-        x = self.forecast_head(x)  # [batch_size, d_model, seq_len]
-        x = self.output_layer(x)  # [batch_size, 1, seq_len]
+        # Forecast head and output layer
+        x = self.forecast_head(x)
 
-        return x.permute(0, 2, 1)  # [batch_size, seq_len, 1] (predicted time series)
+        # Trim the sequence length if it's larger than expected
+        if x.shape[2] > seq_len:
+            x = x[
+                :, :, :seq_len
+            ]  # Crop the sequence length to match the original input length
+        # Convert back to [batch_size, seq_len, 1]
+        x = x.permute(0, 2, 1)  # [batch_size, seq_len, 1]
+        return x  # [batch_size, seq_len, 1]
