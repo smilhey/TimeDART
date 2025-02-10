@@ -54,6 +54,7 @@ parser.add_argument("--lradj", type=str, default="step")
 parser.add_argument("--patience", type=int, default=3)
 
 parser.add_argument("--pretrained_model", type=str, default=None)
+parser.add_argument("--finetune_loss", type=str, default="mse")
 parser.add_argument("--model_name", type=str, default="TimeDART")
 
 args = parser.parse_args()
@@ -195,6 +196,10 @@ def main():
             )
 
     if args.finetune:
+        if args.finetune_loss == "mse":
+            criterion = nn.MSELoss()
+        elif args.finetune_loss == "huber":
+            criterion = nn.HuberLoss()
         if args.pretrained_model != "random":
             state = checkpoint["model_state_dict"]
             # print(state.keys())
