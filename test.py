@@ -74,7 +74,7 @@ def main():
         ax = axes[feature_idx]
         ax.plot(
             actuals[:, feature_idx],
-            label=f"Actual ({df.columns[feature_idx]})",
+            label=f"Actual",
             color="gray",
             alpha=0.5,
         )
@@ -85,8 +85,11 @@ def main():
             alpha=0.8,
         )
         ax.set_ylabel(df.columns[feature_idx])
-        ax.legend()
-
+        
+        for i in range(0, len(predictions), args.pred_len):
+            ax.axvline(x=args.input_len + i, color="red", linestyle="--", alpha=0.25, label=f"Prediction Boundary ({args.pred_len} steps)")
+            if feature_idx == 0 and i == 0:
+                ax.legend(draggable=True)
     plt.xlabel("Time")
     plt.suptitle("Multivariate Time Series with Overlaid Predictions")
     plt.show()
