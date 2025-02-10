@@ -99,7 +99,8 @@ class TCNDecoder(nn.Module):
         self.forecast_head = nn.Conv1d(self.d_model, self.d_model, kernel_size=1)
         self.output_layer = nn.Conv1d(self.d_model, 1, kernel_size=1)
 
-    def forward(self, x):
+    def forward(self, x, query):
+        x = x + query
         x = x.permute(
             0, 2, 1
         )  # (batch_size, seq_len, d_model) -> (batch_size, d_model, seq_len)
