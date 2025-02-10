@@ -1,3 +1,5 @@
+from tqdm import tqdm
+import numpy as np
 import os
 import argparse
 import pandas as pd
@@ -5,7 +7,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from models.TimeDART import Model as TimeDART
-from utils import TimeSeriesDataset, train_val_test_split
+from utils import StrideTimeSeriesDataset
 from torch.utils.data import DataLoader
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -26,43 +28,59 @@ def main():
     df.set_index("date", inplace=True)
 
     data = torch.tensor(df.values).float()
-    _, _, test_data = train_val_test_split(data, patch_len=2)
+    num_features = data.shape[1]
 
-    test_dataset = TimeSeriesDataset(test_data, args.input_len, args.pred_len)
-    test_dataloader = DataLoader(
-        test_dataset, batch_size=args.batch_size, shuffle=False
-    )
+    dataset = StrideTimeSeriesDataset(data, args.input_len)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
 
     checkpoint = torch.load(
         f"{PROJECT_ROOT}/models/{args.pretrained_model}", weights_only=False
     )
-    model_args = checkpoint["model_args"]
+
     model_args = argparse.Namespace(**checkpoint["model_args"])
-    model = TimeDART(model_args)
-    print(model_args)
     model = TimeDART(model_args)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(args.device)
     model.eval()
 
-    predictions, actuals = [], []
+    predictions = []
+
     with torch.no_grad():
-        for x, y in test_dataloader:
-            x, y = x.to(args.device), y.to(args.device)
-            pred_y = model(x)[:, -args.pred_len :].cpu().numpy()
-            predictions.extend(pred_y)
-            actuals.extend(y.cpu().numpy())
+        for x in tqdm((dataloader)):
+            x = x.to(args.device)
+            pred_x = (
+                model(x)[:, -args.pred_len :].cpu().numpy()
+            )  # [batch, pred_len, num_features]
+            predictions.append(np.concatenate(pred_x, axis=0))
 
-    predictions = torch.tensor(predictions).reshape(-1)
-    actuals = torch.tensor(actuals).reshape(-1)
+    predictions = np.concatenate(predictions, axis=0)
+    actuals = data.numpy()
 
-    plt.figure(figsize=(12, 5))
-    plt.plot(actuals, label="Actual", linestyle="dashed")
-    plt.plot(predictions, label="Predicted")
+    fig, axes = plt.subplots(
+        num_features, 1, figsize=(14, 3 * num_features), sharex=True
+    )
+
+    if num_features == 1:
+        axes = [axes]  # Make it iterable for a single-variable case
+
+    for feature_idx in range(num_features):
+        ax = axes[feature_idx]
+        ax.plot(
+            actuals[:, feature_idx],
+            label=f"Actual ({df.columns[feature_idx]})",
+            color="gray",
+            alpha=0.5,
+        )
+        ax.plot(
+            predictions[:, feature_idx],
+            label="Pred",
+            alpha=0.8,
+        )
+        ax.set_ylabel(df.columns[feature_idx])
+        ax.legend()
+
     plt.xlabel("Time")
-    plt.ylabel("Value")
-    plt.title("Model Predictions vs Actual Data")
-    plt.legend()
+    plt.suptitle("Multivariate Time Series with Overlaid Predictions")
     plt.show()
 
 
