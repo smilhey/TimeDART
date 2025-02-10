@@ -169,7 +169,7 @@ class Model(nn.Module):
         # Patch
         x_patch = self.patch(x)  # [batch_size * num_features, seq_len, patch_len]
 
-        # For Casual Transformer
+        # For TCN Encoder
         x_embedding = self.enc_embedding(
             x_patch
         )  # [batch_size * num_features, seq_len, d_model]
@@ -179,7 +179,6 @@ class Model(nn.Module):
         x_embedding_bias = self.positional_encoding(x_embedding_bias)
         x_out = self.encoder(
             x_embedding_bias,
-            is_mask=True,
         )  # [batch_size * num_features, seq_len, d_model]
 
         # Diffusion
@@ -191,15 +190,9 @@ class Model(nn.Module):
         )  # [batch_size * num_features, seq_len, d_model]
         noise_x_embedding = self.positional_encoding(noise_x_embedding)
 
-        # For Denoising Patch Decoder
+        # For TCN Decoder
         # predict_x = self.tcn_decoder(x_out)  # [batch_size, seq_len, d_model]
-        predict_x = self.denoising_patch_decoder(
-            query=noise_x_embedding,
-            key=x_out,
-            value=x_out,
-            is_tgt_mask=True,
-            is_src_mask=True,
-        )  # [batch_size * num_features, seq_len, d_model]
+        predict_x = self.tcn_decoder(x_out, noise_x_embedding)  # [batch_size, seq_len, d_model]
 
         # For Decoder
         predict_x = predict_x.reshape(
@@ -233,8 +226,7 @@ class Model(nn.Module):
         x = self.enc_embedding(x)  # [batch_size * num_features, seq_len, d_model]
         x = self.positional_encoding(x)  # [batch_size * num_features, seq_len, d_model]
         x = self.encoder(
-            x,
-            is_mask=False,
+            x
         )  # [batch_size * num_features, seq_len, d_model]
         x = x.reshape(
             batch_size, num_features, -1, self.d_model
