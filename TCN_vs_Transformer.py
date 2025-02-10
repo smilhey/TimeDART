@@ -7,6 +7,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from models.TimeDART import Model as TimeDART
+from models.TCN import Model as TCN
 from utils import StrideTimeSeriesDataset, load_test_data
 from torch.utils.data import DataLoader
 
@@ -14,8 +15,8 @@ PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", type=str, default="ETTh1.csv")
-parser.add_argument("--pretrained_model", type=str, required=True)
-parser.add_argument("--random_init_model", type=str, required=True)
+parser.add_argument("--pretrained_TCN", type=str, required=True)
+parser.add_argument("--pretrained_TimeDART", type=str, required=True)
 parser.add_argument("--input_len", type=int, default=336)
 parser.add_argument("--pred_len", type=int, default=336)
 parser.add_argument("--batch_size", type=int, default=16)
@@ -39,7 +40,7 @@ def main():
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
 
     checkpoint = torch.load(
-        f"{PROJECT_ROOT}/models/{args.pretrained_model}", weights_only=False
+        f"{PROJECT_ROOT}/models/{args.pretrained_TimeDART}", weights_only=False
     )
 
     model_args = argparse.Namespace(**checkpoint["model_args"])
@@ -49,18 +50,18 @@ def main():
     model.to(args.device)
     model.eval()
 
-    random_checkpoint = torch.load(
-        f"{PROJECT_ROOT}/models/{args.random_init_model}", weights_only=False
+    tcn_checkpoint = torch.load(
+        f"{PROJECT_ROOT}/models/{args.pretrained_TCN}", weights_only=False
     )
 
-    random_model_args = argparse.Namespace(**random_checkpoint["model_args"])
-    random_model = TimeDART(random_model_args)
-    random_model.load_state_dict(random_checkpoint["model_state_dict"])
-    random_model.to(args.device)
-    random_model.eval()
+    tcn_model_args = argparse.Namespace(**tcn_checkpoint["model_args"])
+    tcn_model = TCN(tcn_model_args)
+    tcn_model.load_state_dict(tcn_checkpoint["model_state_dict"])
+    tcn_model.to(args.device)
+    tcn_model.eval()
 
     predictions = []
-    random_predictions = []
+    tcn_predictions = []
 
     with torch.no_grad():
         for x in tqdm((dataloader)):
@@ -68,14 +69,14 @@ def main():
             pred_x = (
                 model(x)[:, -args.pred_len :].cpu().numpy()
             )  # [batch, pred_len, num_features]
-            random_pred_x = (
-                random_model(x)[:, -args.pred_len :].cpu().numpy()
+            tcn_pred_x = (
+                tcn_model(x)[:, -args.pred_len :].cpu().numpy()
             )  # [batch, pred_len, num_features]
             predictions.append(np.concatenate(pred_x, axis=0))
-            random_predictions.append(np.concatenate(random_pred_x, axis=0))
+            tcn_predictions.append(np.concatenate(tcn_pred_x, axis=0))
 
     predictions = np.concatenate(predictions, axis=0)
-    random_predictions = np.concatenate(random_predictions, axis=0)
+    tcn_predictions = np.concatenate(tcn_predictions, axis=0)
     print(predictions.shape)
     actuals = data.numpy()
     print(actuals.shape)
@@ -98,13 +99,13 @@ def main():
         ax.plot(
             range(args.input_len, args.input_len +len(predictions)),
             predictions[:, feature_idx],
-            label="Pretrain Pred",
+            label="TimeDART Pred",
             alpha=0.8,
         )
         ax.plot(
             range(args.input_len, args.input_len +len(predictions)),
-            random_predictions[:, feature_idx],
-            label="Random Pred",
+            tcn_predictions[:, feature_idx],
+            label="TCN Pred",
             alpha=0.8,
         )
         ax.set_ylabel(df.columns[feature_idx])
@@ -114,7 +115,7 @@ def main():
                 ax.legend(draggable=True)
 
     plt.xlabel("Time")
-    plt.suptitle("Multivariate Time Series with Overlaid Predictions - Random init vs pretrain")
+    plt.suptitle("Multivariate Time Series with Overlaid Predictions - TCN vs TimeDART")
     plt.show()
 
 
