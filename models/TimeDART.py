@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
-from .layers.encoder_decoder import CausalTransformerEncoder, MaskedDenoisingPatchDecoder
+from .layers.tcn import TCNEncoder, TCNDecoder
+from .layers.encoder_decoder import (
+    CausalTransformerEncoder,
+    MaskedDenoisingPatchDecoder,
+)
 from .layers.diffusion import Diffusion
 from .layers.preprocess import (
     ChannelIndependence,
@@ -61,7 +65,7 @@ class Model(nn.Module):
 
         # Patch
         self.patch_len = args.patch_len
-        self.stride = self.patch_len # non-overlapping
+        self.stride = self.patch_len  # non-overlapping
         self.patch = Patch(
             patch_len=self.patch_len,
             stride=self.stride,
@@ -93,6 +97,14 @@ class Model(nn.Module):
             device=self.device,
             scheduler=args.scheduler,
         )
+
+        # self.encoder = TCNEncoder(
+        #     input_size=args.d_model,
+        #     d_model=args.d_model,
+        #     num_layers=args.e_layers,
+        #     kernel_size=3,
+        #     dropout=args.dropout,
+        # )
         self.encoder = CausalTransformerEncoder(
             d_model=args.d_model,
             num_heads=args.n_heads,
@@ -100,14 +112,15 @@ class Model(nn.Module):
             dropout=args.dropout,
             num_layers=args.e_layers,
         )
-        # self.encoder = DilatedConvEncoder(
-        #     in_channels=self.d_model,
-        #     channels=[self.d_model] * args.e_layers,
-        #     kernel_size=3,
-        # )
 
         # Decoder
         if self.task_name == "pretrain":
+            # self.tcn_decoder = TCNDecoder(
+            #     d_model=args.d_model,
+            #     num_layers=args.d_layers,  # Adjust this based on your needs
+            #     kernel_size=3,
+            #     dropout=args.dropout
+            # )
             self.denoising_patch_decoder = MaskedDenoisingPatchDecoder(
                 d_model=args.d_model,
                 num_layers=args.d_layers,
@@ -179,6 +192,7 @@ class Model(nn.Module):
         noise_x_embedding = self.positional_encoding(noise_x_embedding)
 
         # For Denoising Patch Decoder
+        # predict_x = self.tcn_decoder(x_out)  # [batch_size, seq_len, d_model]
         predict_x = self.denoising_patch_decoder(
             query=noise_x_embedding,
             key=x_out,
